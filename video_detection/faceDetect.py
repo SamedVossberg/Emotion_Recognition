@@ -1,28 +1,9 @@
-from keras.models import model_from_json
 import numpy as np
 import cv2
 import argparse
 import os
 
-
-class FacialExpressionModel(object):
-    # detectable Emotions
-    EMOTIONS_LIST = ["Angry", "Disgust", "Fear", "Happy", "Sad", "Surprise", "Neutral"]
-
-    def __init__(self, model_json_file, model_weights_file):
-        # loading of model and weights
-        with open(model_json_file, "r") as json_file:
-            loaded_model_json = json_file.read()
-            self.loaded_model = model_from_json(loaded_model_json)
-        self.loaded_model.load_weights(model_weights_file)
-        print("Model loaded from disk")
-        self.loaded_model.summary()
-
-    # function for Emotion detection returning the FaceialExpressionModel emotions
-    def predict_emotion(self, img):
-        self.preds = self.loaded_model.predict(img)
-        return FacialExpressionModel.EMOTIONS_LIST[np.argmax(self.preds)]
-
+from models.facial_expression_model import FacialExpressionModel
 
 # Variables for video caption and source these can be defined later on when starting the file
 # THIS MIGHT BE DIFFERENT FOR YOU BC I AM ON MACOS! SO BE AWARE THIS MIGHT BE A SOURCE OF ERROR WHEN U TRY TO START UP
