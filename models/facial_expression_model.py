@@ -1,9 +1,19 @@
 from keras.models import model_from_json
 import numpy as np
 
+
 class FacialExpressionModel(object):
     # detectable Emotions
-    EMOTIONS_LIST = ["Angry", "Disgust", "Fear", "Happy", "Sad", "Surprise", "Neutral"]
+    EMOTIONS_COLOR_MAPPING = {
+        "Angry": (255, 0, 0),
+        "Disgust": (0, 255, 255),
+        "Fear": (255, 0, 255),
+        "Happy": (0, 255, 0),
+        "Sad": (0, 0, 0),
+        "Surprise": (255, 255, 0),
+        "Neutral": (255, 255, 255),
+    }
+    EMOTIONS_LIST = list(EMOTIONS_COLOR_MAPPING.keys())
 
     def __init__(self, model_json_file, model_weights_file):
         # loading of model and weights

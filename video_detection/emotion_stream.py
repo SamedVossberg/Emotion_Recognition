@@ -6,14 +6,10 @@ from models.facial_expression_model import FacialExpressionModel
 
 def video_smile_detector(file_path: str | int) -> None:
     # Load the cascade
-    face_cascade = cv2.CascadeClassifier(
-        "./photo_detection/haarcascade_frontalface_default.xml"
-    )
+    face_cascade = cv2.CascadeClassifier("./models/haarcascade_frontalface_default.xml")
 
     # Load the model
-    model = FacialExpressionModel(
-        "./photo_detection/model.json", "./photo_detection/weights.h5"
-    )
+    model = FacialExpressionModel("./models/model.json", "./models/weights.h5")
 
     # Initialize video capture with the video file path or web cam
     cap = cv2.VideoCapture(file_path)
@@ -22,7 +18,7 @@ def video_smile_detector(file_path: str | int) -> None:
         # Capture frame-by-frame
         ret, frame = cap.read()
 
-        # Break the loop if we've reached the end of the video
+        # Break the loop if we've reached the end of the video (stream)
         if not ret:
             break
 
@@ -40,21 +36,22 @@ def video_smile_detector(file_path: str | int) -> None:
             roi_gray = np.expand_dims(roi_gray, axis=0)
             roi_gray = np.expand_dims(roi_gray, axis=-1)
 
-            predictions = model.predict_emotion(roi_gray)
-            print(predictions)
+            prediction = model.predict_emotion(roi_gray)
+            print(prediction)
 
-            # If model predicts "Angry", draw a rectangle and label on the face
-            if predictions == "Angry":
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                cv2.putText(
-                    frame,
-                    predictions,
-                    (x, y - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.9,
-                    (0, 255, 0),
-                    2,
-                )
+            color = FacialExpressionModel.EMOTIONS_COLOR_MAPPING[prediction]
+
+            # Draw a rectangle and label on the face
+            cv2.rectangle(frame, (x, y), (x + w, y + h), color, 6)
+            cv2.putText(
+                frame,
+                prediction,
+                (x, y - 10),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                10,
+                color,
+                6,
+            )
 
         # Get the original frame's width and height
         original_height, original_width = frame.shape[:2]
@@ -84,6 +81,7 @@ def video_smile_detector(file_path: str | int) -> None:
     cap.release()
     cv2.destroyAllWindows()
 
+
 # Change argument to a number for live streaming your web cam.
-# Change argument to a path of a video file to test on a video. 
+# Change argument to a path of a video file to test on a video.
 video_smile_detector("./data/videos/smiling.mov")
