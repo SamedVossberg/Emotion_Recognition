@@ -24,18 +24,17 @@ class FacialExpressionModel(object):
 
 
 def is_smiling(picture):
-
     # convert the base64 object to jpg object and saving it to be called later on
-    with open("./potential_smiler.jpg", "wb") as photo:
+    with open("./photo_detection/potential_smiler.jpg", "wb") as photo:
         photo.write(base64.b64decode(picture))
 
     # Load the cascades
-    face_cascade = cv2.CascadeClassifier("haarcascade_frontalface_default.xml")
+    face_cascade = cv2.CascadeClassifier("./models/haarcascade_frontalface_default.xml")
 
-    model = FacialExpressionModel("model.json", "weights.h5")
+    model = FacialExpressionModel("./models/model.json", "./models/weights.h5")
 
     # Open the image using PIL
-    img = Image.open("./potential_smiler.jpg")
+    img = Image.open("./photo_detection/potential_smiler.jpg")
 
     # Convert image to numpy array
     img = np.array(img)
@@ -47,7 +46,7 @@ def is_smiling(picture):
     faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 
     # Iterate over the faces
-    for (x, y, w, h) in faces:
+    for x, y, w, h in faces:
         roi_color = gray[y : y + h, x : x + w]
         roi_color = cv2.resize(roi_color, (48, 48))
         # roi_color = image.img_to_array(roi_color)
