@@ -9,16 +9,17 @@ from models.facial_expression_model import FacialExpressionModel
 
 # Variables for video caption and source these can be defined later on when starting the file
 # THIS MIGHT BE DIFFERENT FOR YOU BC I AM ON MACOS! SO BE AWARE THIS MIGHT BE A SOURCE OF ERROR WHEN U TRY TO START UP
-parser = argparse.ArgumentParser()
-parser.add_argument("source")
-parser.add_argument("fps")
-args = parser.parse_args()
+# parser = argparse.ArgumentParser()
+# parser.add_argument("source")
+# parser.add_argument("fps")
+# args = parser.parse_args()
 cap = cv2.VideoCapture(
-    os.path.abspath(args.source) if not args.source == "webcam" else 1
+    # os.path.abspath(args.source) if not args.source == "webcam" else 1
+    0
 )
 faceCascade = cv2.CascadeClassifier("./models/haarcascade_frontalface_default.xml")
 font = cv2.FONT_HERSHEY_SIMPLEX
-cap.set(cv2.CAP_PROP_FPS, int(args.fps))
+# cap.set(cv2.CAP_PROP_FPS, int(args.fps))
 
 
 class DetectedFace:
@@ -53,9 +54,17 @@ def start_app(cnn):
             # Sort detected faces by x-coordinate
             faces.sort(key=lambda face: face.x)
 
-            # Assign IDs to faces from left to right
-            for i, face in enumerate(faces):
-                face.id = i + 1
+            height, width = fr.shape[:2]
+            threshold_index1 = int(width/3) # so far just sliced into three areas --> has to be adapted to fit the use case
+            threshold_index2 = int(2 * width/3)
+
+            for face in faces:
+                if face.x + face.w/2 < threshold_index1:
+                    face.id = 1
+                elif face.x + face.w/2 < threshold_index2:
+                    face.id = 2
+                else:
+                    face.id = 3
 
             # Predict emotions and draw bounding boxes
             for face in faces:
@@ -66,7 +75,8 @@ def start_app(cnn):
                 # Adding Rectangle and the text that displays the detected emotion and ID
                 cv2.putText(
                     fr,
-                    f"{pred} ({face.id})",
+                    # f"{pred} ({face.id})",
+                    f"{face.id}",
                     (face.x, face.y),
                     font,
                     3,
@@ -80,6 +90,19 @@ def start_app(cnn):
                     (255, 0, 0),
                     2,
                 )
+                cv2.line(
+                    img = fr,
+                    pt1 = (threshold_index1,0),
+                    pt2 = (threshold_index1, height),
+                    color=(255, 0, 0)
+                    )
+                cv2.line(
+                    img = fr,
+                    pt1 = (threshold_index2, 0),
+                    pt2 = (threshold_index2, height),
+                    color=(255, 0, 0)
+                    )
+                
 
         if cv2.waitKey(1) == 27:
             break
