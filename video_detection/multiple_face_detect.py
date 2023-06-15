@@ -75,7 +75,7 @@ def start_app(cnn):
                 # Adding Rectangle and the text that displays the detected emotion and ID
                 cv2.putText(
                     fr,
-                    # f"{pred} ({face.id})",
+                    # f"{pred} ({face.id})", # To see ids better currently commented out but has to be put in later again and next line removed
                     f"{face.id}",
                     (face.x, face.y),
                     font,
