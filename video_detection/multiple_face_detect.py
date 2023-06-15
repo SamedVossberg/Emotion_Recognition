@@ -54,8 +54,8 @@ def start_app(cnn):
             # Sort detected faces by x-coordinate
             faces.sort(key=lambda face: face.x)
 
-            height, width = fr.shape[:2]
-            threshold_index1 = int(width/3) # so far just sliced into three areas --> has to be adapted to fit the use case
+            height, width = fr.shape[:2] #Height and width of frame
+            threshold_index1 = int(width/3) # so far just sliced into three same-sized areas --> has to be adapted to fit the use case
             threshold_index2 = int(2 * width/3)
 
             for face in faces:
@@ -90,6 +90,7 @@ def start_app(cnn):
                     (255, 0, 0),
                     2,
                 )
+                #Lines are there to show the areas for the id's -> Can later be removed
                 cv2.line(
                     img = fr,
                     pt1 = (threshold_index1,0),
