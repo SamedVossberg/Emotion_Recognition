@@ -9,17 +9,26 @@ from models.facial_expression_model import FacialExpressionModel
 
 # Variables for video caption and source these can be defined later on when starting the file
 # THIS MIGHT BE DIFFERENT FOR YOU BC I AM ON MACOS! SO BE AWARE THIS MIGHT BE A SOURCE OF ERROR WHEN U TRY TO START UP
-# parser = argparse.ArgumentParser()
-# parser.add_argument("source")
-# parser.add_argument("fps")
-# args = parser.parse_args()
-cap = cv2.VideoCapture(
-    # os.path.abspath(args.source) if not args.source == "webcam" else 1
-    0
-)
+# Changed fps to an optional argument --> Now you can just pass "Default" as the source argument and no fps limit is set and source 0 (to avoid start up problems on windows)
+
+parser = argparse.ArgumentParser()
+parser.add_argument("source")
+parser.add_argument("fps", nargs="?")
+args = parser.parse_args()
+
+
+if(args.source == "Default"):
+    cap = cv2.VideoCapture(0)
+else:
+    cap = cv2.VideoCapture(
+        os.path.abspath(args.source) if not args.source == "webcam" else 1
+    )
+    cap.set(cv2.CAP_PROP_FPS, int(args.fps))
+
+
 faceCascade = cv2.CascadeClassifier("./models/haarcascade_frontalface_default.xml")
 font = cv2.FONT_HERSHEY_SIMPLEX
-# cap.set(cv2.CAP_PROP_FPS, int(args.fps))
+
 
 
 class DetectedFace:
