@@ -53,8 +53,6 @@ def getdata():
 
 
 # starting app and running face detection using OpenCV
-
-
 def start_app(cnn):
     while cap.isOpened():
         faces, fr, gray_fr = getdata()
@@ -64,6 +62,9 @@ def start_app(cnn):
             faces.sort(key=lambda face: face.x)
 
             height, width = fr.shape[:2] #Height and width of frame
+
+            #Thresholds mark vertical lines --> when the middle of a recognized face crosses the line the index will be changed
+            
             threshold_index1 = int(width/3) # so far just sliced into three same-sized areas --> has to be adapted to fit the use case
             threshold_index2 = int(2 * width/3)
 
@@ -84,8 +85,8 @@ def start_app(cnn):
                 # Adding Rectangle and the text that displays the detected emotion and ID
                 cv2.putText(
                     fr,
-                    # f"{pred} ({face.id})", # To see ids better currently commented out but has to be put in later again and next line removed
-                    f"{face.id}",
+                    # f"{pred} ({face.id})", 
+                    f"({face.id}) {pred}", # currently changed to highlight index changes
                     (face.x, face.y),
                     font,
                     3,
@@ -117,6 +118,7 @@ def start_app(cnn):
         if cv2.waitKey(1) == 27:
             break
 
+        cv2.namedWindow("Facial Emotion Recognition", cv2.WINDOW_NORMAL)
         cv2.imshow("Facial Emotion Recognition", fr)
 
     cap.release()
