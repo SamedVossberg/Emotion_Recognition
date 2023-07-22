@@ -1,4 +1,4 @@
-from keras.models import Sequential
+from keras.models import Sequential, load_model
 from keras.layers import Conv2D, MaxPooling2D, BatchNormalization, Dropout, Flatten, Dense, Activation
 from keras.initializers import VarianceScaling, Zeros, Ones
 from keras.regularizers import Regularizer
@@ -9,52 +9,66 @@ from keras.callbacks import ModelCheckpoint
 from kerastuner.tuners import RandomSearch
 import numpy as np
 import pandas as pd
+import json
 from sklearn.model_selection import train_test_split
 
+# Load the saved model
+loaded_model = load_model('emotion_detection_model.h5')
 
-# TODO: use hp to tune the model
-# Model initailization
 def build_model(hp):
+
+# Model initialization
     model = Sequential()
 
-    model.add(Conv2D(filters=64, kernel_size=(3, 1), padding='same', activation='linear', input_shape=(48, 48, 1), name="conv2d_1"))
-    model.add(Conv2D(filters=64, kernel_size=(1, 3), padding='same', activation='linear', name="conv2d_2"))
+# Hyperparameter search space
+    filter_size_1 = hp.Choice('units', [32, 64, 96])
+    filter_size_2 = hp.Choice('units', [96, 128, 160])
+    filter_size_3 = hp.Choice('units', [192, 256, 320])
+    filter_size_4 = hp.Choice('units', [320, 512, 640])
+    kernel_size = hp.Choice('kernel_size', [(3,1), (3,3), (1,3)])
+    activation = hp.Choice('activation', ['linear', 'relu'])
+    padding = hp.Choice('padding', ['same', 'valid'])
+    dropout_rate = hp.Choice('dropout_rate', [0.1, 0.25, 0.5])
+    learning_rate = hp.Choice('learning_rate', [0.001, 0.0001, 0.00001])
+
+    model.add(Conv2D(filters=filter_size_1, kernel_size=kernel_size, padding=padding, activation=activation, input_shape=(48, 48, 1), name="conv2d_1"))
+    model.add(Conv2D(filters=filter_size_1, kernel_size=kernel_size, padding=padding, activation=activation, name="conv2d_2"))
     model.add(BatchNormalization(name="batch_normalization_1"))
     model.add(Activation(activation="relu"))
     model.add(MaxPooling2D(pool_size=(2, 2), padding="same"))
-    model.add(Dropout(0.25))
+    model.add(Dropout(dropout_rate))
 
-    model.add(Conv2D(filters=128, kernel_size=(3, 1), padding='same', activation='linear', name="conv2d_3"))
-    model.add(Conv2D(filters=128, kernel_size=(1, 3), padding='same', activation='linear', name="conv2d_4"))
+    model.add(Conv2D(filters=filter_size_2, kernel_size=kernel_size, padding=padding, activation=activation, name="conv2d_3"))
+    model.add(Conv2D(filters=filter_size_2, kernel_size=kernel_size, padding=padding, activation=activation, name="conv2d_4"))
     model.add(BatchNormalization(name="batch_normalization_2"))
     model.add(Activation(activation="relu"))
     model.add(MaxPooling2D(pool_size=(2, 2), padding="same"))
-    model.add(Dropout(0.25))
+    model.add(Dropout(dropout_rate))
 
-    model.add(Conv2D(filters=256, kernel_size=(3, 1), padding='same', activation='linear', name="conv2d_5"))
-    model.add(Conv2D(filters=256, kernel_size=(1, 3), padding='same', activation='linear', name="conv2d_6"))
+    model.add(Conv2D(filters=filter_size_3, kernel_size=kernel_size, padding=padding, activation=activation, name="conv2d_5"))
+    model.add(Conv2D(filters=filter_size_3, kernel_size=kernel_size, padding=padding, activation=activation, name="conv2d_6"))
     model.add(BatchNormalization(name="batch_normalization_3"))
     model.add(Activation(activation="relu"))
     model.add(MaxPooling2D(pool_size=(2, 2), padding="same"))
-    model.add(Dropout(0.25))
+    model.add(Dropout(dropout_rate))
 
-    model.add(Conv2D(filters=512, kernel_size=(3, 1), padding='same', activation='linear', name="conv2d_7"))
-    model.add(Conv2D(filters=512, kernel_size=(1, 3), padding='same', activation='linear', name="conv2d_8"))
+    model.add(Conv2D(filters=filter_size_4, kernel_size=kernel_size, padding=padding, activation=activation, name="conv2d_7"))
+    model.add(Conv2D(filters=filter_size_4, kernel_size=kernel_size, padding=padding, activation=activation, name="conv2d_8"))
     model.add(BatchNormalization(name="batch_normalization_4"))
     model.add(Activation(activation="relu"))
     model.add(MaxPooling2D(pool_size=(2, 2), padding="same"))
-    model.add(Dropout(0.25))
+    model.add(Dropout(dropout_rate))
 
     model.add(Flatten())
     model.add(Dense(512, activation='linear', name="dense_1"))
     model.add(BatchNormalization(name="batch_normalization_5"))
     model.add(Activation(activation="relu"))
-    model.add(Dropout(0.5))
+    model.add(Dropout(dropout_rate))
 
     model.add(Dense(7, activation='softmax', name="dense_2"))
 
     # Compile the model
-    model.compile(optimizer=Adam(lr=0.001), loss='categorical_crossentropy', metrics=['accuracy'])
+    model.compile(optimizer=Adam(lr=learning_rate), loss='categorical_crossentropy', metrics=['accuracy'])
 
 
 
@@ -87,7 +101,7 @@ test_loss, test_acc = model.evaluate(test_pixels, test_emotions)
 print('Test accuracy:', test_acc)
 
 
-
+# Tune the model
 tuner = RandomSearch(
     build_model,
     objective='val_accuracy',
@@ -98,3 +112,25 @@ tuner = RandomSearch(
 tuner.search(train_pixels, train_emotions,
              epochs=3,
              validation_data=(val_pixels, val_emotions))
+
+# Get the optimal hyperparameters
+best_hps=tuner.get_best_hyperparameters(num_trials=1)[0]
+
+# Build the model with the optimal hyperparameters
+best_model = tuner.hypermodel.build(best_hps)
+
+# Train the best model
+history = best_model.fit(train_pixels, train_emotions, epochs=50, validation_data=(val_pixels, val_emotions))
+
+# Save the model
+best_model.save('emotion_detection_model.h5')
+
+# Get the model's configuration
+config_dict = model.get_config()
+
+# Convert the model's configuration to JSON format
+config_json = json.dumps(config_dict, indent=4)
+
+# Save the model's configuration in JSON format
+with open('model_config.json', 'w') as json_file:
+    json_file.write(config_json)
