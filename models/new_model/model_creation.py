@@ -20,6 +20,29 @@ import pandas as pd
 import json
 from sklearn.model_selection import train_test_split
 
+#Alternative zu eigenem Modell: Pretrained Model --> kleines ResNet auf ImageNet trainiert, am besten sehr kleines Netz
+
+#Auch 48x48 sollte gehen
+# tf.keras.applications.efficientnet.EfficientNetB0(
+#     include_top=True,
+#     weights='imagenet',
+#     input_tensor=None,
+#     input_shape=None,
+#     pooling=None,
+#     classes=7,  #==> Hier 7, da 7 Output Classes
+#     classifier_activation='softmax',
+#     **kwargs
+# )
+
+
+# Nochmal Resnet anschauen --> Idee von Skip Connections; y = f(x) + x
+# Dafür Modell anders aufbauen --> nicht einzeln, selber implementieren
+
+# Als Aktivierung immer ReLU -> wir haben bisher doppelt drin, Bei Linear dazwischen fallen Schichten zusammen
+# Normal: ConvLayer, Act, Normalization
+
+# KernelSize: (3,3) sollte eigentlich immer der Standard sein
+
 
 def build_model(hp):
     # Model initialization
@@ -58,7 +81,7 @@ def build_model(hp):
     model.add(BatchNormalization(name="batch_normalization_1"))
     model.add(Activation(activation="relu"))
     model.add(MaxPooling2D(pool_size=(2, 2), padding="same"))
-    model.add(Dropout(dropout_rate))
+    # model.add(Dropout(dropout_rate))
 
     model.add(
         Conv2D(
@@ -81,7 +104,7 @@ def build_model(hp):
     model.add(BatchNormalization(name="batch_normalization_2"))
     model.add(Activation(activation="relu"))
     model.add(MaxPooling2D(pool_size=(2, 2), padding="same"))
-    model.add(Dropout(dropout_rate))
+    # model.add(Dropout(dropout_rate))
 
     model.add(
         Conv2D(
@@ -104,7 +127,7 @@ def build_model(hp):
     model.add(BatchNormalization(name="batch_normalization_3"))
     model.add(Activation(activation="relu"))
     model.add(MaxPooling2D(pool_size=(2, 2), padding="same"))
-    model.add(Dropout(dropout_rate))
+    # model.add(Dropout(dropout_rate))
 
     model.add(
         Conv2D(
@@ -126,20 +149,27 @@ def build_model(hp):
     )
     model.add(BatchNormalization(name="batch_normalization_4"))
     model.add(Activation(activation="relu"))
-    model.add(MaxPooling2D(pool_size=(2, 2), padding="same"))
-    model.add(Dropout(dropout_rate))
+    model.add(MaxPooling2D(pool_size=(2, 2), padding="same")) #Hier macht Pooling nicht mehr wirklich Sinn --> auch durch Global Average Pooling ersetzen
+    # model.add(Dropout(dropout_rate))
 
     model.add(Flatten())
+    # Global Average Pool als Alternative zu Flatten
+    # https://keras.io/api/layers/pooling_layers/global_average_pooling2d/ TBD
+    # Eine Zahl als Output
+
+
+
     model.add(Dense(512, activation="linear", name="dense_1"))
     model.add(BatchNormalization(name="batch_normalization_5"))
     model.add(Activation(activation="relu"))
     model.add(Dropout(dropout_rate))
 
+    #Nur ein FC Layer --> keine Zwei und dann auch gar kein Dropout mehr
     model.add(Dense(7, activation="softmax", name="dense_2"))
 
     # Compile the model
     model.compile(
-        optimizer=Adam(lr=learning_rate),
+        optimizer=Adam(lr=learning_rate), #AdamW benutzen statt Adam (mit Weight Decay)
         loss="categorical_crossentropy",
         metrics=["accuracy"],
     )
