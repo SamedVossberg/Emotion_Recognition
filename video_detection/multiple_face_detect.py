@@ -1,9 +1,12 @@
+import time
 from keras.models import model_from_json
 import numpy as np
 import cv2
 import argparse
 import os
-import time
+from models import affect_model
+
+from models.affect_model import AffectModel
 
 
 from models.facial_expression_model import FacialExpressionModel
@@ -23,7 +26,8 @@ if(args.source == "Default"):
     cap = cv2.VideoCapture(0)
 else:
     cap = cv2.VideoCapture(
-        os.path.abspath(args.source) if not args.source == "webcam" else 1
+        # os.path.abspath(args.source) if not args.source == "webcam" else 1
+        0
     )
     cap.set(cv2.CAP_PROP_FPS, int(args.fps))
 
@@ -56,16 +60,20 @@ class DetectedFace:
         return (self.x + self.w // 2, self.y + self.h // 2)
 
 
+
 # Function for grayscaling the videoimage and using the haarcascade to detect faces
 def getdata():
     _, fr = cap.read()
-    gray = cv2.cvtColor(fr, cv2.COLOR_BGR2GRAY)
+    # gray = cv2.cvtColor(fr, cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(fr,cv2.COLOR_BGR2RGB)#
+    
     faces = faceCascade.detectMultiScale(gray, 1.3, 5)
     detected_faces = [DetectedFace(x, y, w, h) for x, y, w, h in faces]
     return detected_faces, fr, gray
 
 
 # starting app and running face detection using OpenCV
+
 def start_app(cnn):
     global last_face_id
     while cap.isOpened():
@@ -156,10 +164,11 @@ def start_app(cnn):
             if face is None:
                 continue
             fc = gray_fr[face.y : face.y + face.h, face.x : face.x + face.w]
-            roi = cv2.resize(fc, (48, 48))
-            pred = cnn.predict_emotion(roi[np.newaxis, :, :, np.newaxis])
 
-            emotioncolor = FacialExpressionModel.EMOTIONS_COLOR_MAPPING[pred]
+            roi = cv2.resize(fc, (214, 214))
+            pred = cnn.predict_emotion(roi)
+
+            emotioncolor = AffectModel.EMOTIONS_COLOR_MAPPING[pred]
 
             # Adding Rectangle and the text that displays the detected emotion and ID
             cv2.putText(
@@ -168,16 +177,16 @@ def start_app(cnn):
                 f"({face_ids[i]}) {pred}", # currently changed to highlight index changes
                 (face.x, face.y),
                 fontFace=font,
-                fontScale=3,
+                fontScale=1,
                 color=emotioncolor,
-                thickness=2,
+                thickness=1,
             )
             cv2.rectangle(
                 fr,
                 (face.x, face.y),
                 (face.x + face.w, face.y + face.h),
                 color = emotioncolor,
-                thickness= 2,
+                thickness= 1,
             )
 
         # break loop if q is pressed
@@ -193,6 +202,9 @@ def start_app(cnn):
     cv2.destroyAllWindows()
 
 
+
+
 if __name__ == "__main__":
-    model = FacialExpressionModel("./models/model.json", "./models/weights.h5")
+    # model = FacialExpressionModel("./models/model.json", "./models/weights.h5")
+    model = AffectModel("affectNet_emotion_model_best_v2.pth")
     start_app(model)
