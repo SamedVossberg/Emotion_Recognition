@@ -4,9 +4,9 @@ import numpy as np
 import cv2
 import argparse
 import os
-from models import affect_model
+from models.new_model import affect_model
 
-from models.affect_model import AffectModel
+from models.new_model.affect_model import AffectModel
 
 
 from models.facial_expression_model import FacialExpressionModel
@@ -154,9 +154,9 @@ def start_app(cnn):
         for i in range(3):
             threshold_index = threshold_indices[i]  
             if expiry_timers[i] is not None:
-                cv2.putText(fr, f"Expiry: {int(expiry_timers[i] - current_time)}", (threshold_index, 50), fontFace =font, fontScale = 3, color = (0, 0, 0), thickness=4)
+                cv2.putText(fr, f"Expiry: {int(expiry_timers[i] - current_time)}", (threshold_index, 50), fontFace =font, fontScale = 1, color = (0, 0, 0), thickness=2)
             elif face_timers[i] is not None:
-                cv2.putText(fr, f"Timer: {int(current_time - face_timers[i])}", (threshold_index, 50), fontFace = font, fontScale = 3, color = (0, 0, 0), thickness=4)
+                cv2.putText(fr, f"Timer: {int(current_time - face_timers[i])}", (threshold_index, 50), fontFace = font, fontScale = 1, color = (0, 0, 0), thickness=2)
         
         # Predict emotions and draw bounding boxes
         for i in range(3):
@@ -206,5 +206,5 @@ def start_app(cnn):
 
 if __name__ == "__main__":
     # model = FacialExpressionModel("./models/model.json", "./models/weights.h5")
-    model = AffectModel("affectNet_emotion_model_best_v2.pth")
+    model = AffectModel("affectNet_emotion_model_best_1.49.pth")
     start_app(model)
