@@ -18,6 +18,8 @@ import torchvision
 from torch.optim import lr_scheduler
 from torchvision.transforms.functional import erase
 import matplotlib.pyplot as plt
+# Import the re module for regular expressions
+import re
 
 class CustomDataset(Dataset):
     def __init__(self, dataframe, transform=None):
@@ -35,6 +37,17 @@ class CustomDataset(Dataset):
             image = self.transform(image)
         
         return image, label
+
+# Define a function to filter parameters
+def filter_params(params, include_patterns, exclude_patterns):
+    included_params = []
+    excluded_params = []
+    for name, param in params:
+        if any(re.search(pattern, name) for pattern in include_patterns):
+            included_params.append(param)
+        elif not any(re.search(pattern, name) for pattern in exclude_patterns):
+            excluded_params.append(param)
+    return included_params, excluded_params
 
 # Load the annotations for training and validation from separate CSV files
 train_annotations_path = 'dataset/AffectNet/affect_train.csv'
@@ -66,13 +79,19 @@ transform = transforms.Compose([
     # transforms.RandomResizedCrop(size=190, scale=(0.8, 1.0)),
     # transforms.RandomAffine(degrees=0, translate=(0.1, 0.1), scale=(0.9, 1.1)),
 
+    # transforms.RandomPerspective(),
+    transforms.ElasticTransform(alpha=5.0, sigma=5.0),
+    transforms.GaussianBlur(kernel_size=(5, 9), sigma=(0.1, 5)),
+
     # transforms.RandomApply([transforms.Lambda(lambda x: elastic_transform(x, alpha_range=(50, 100), sigma_range=(5, 15)))]),
     # transforms.Lambda(lambda x: erase(x, i=0, j=0, h=x.size(1), w=x.size(2), v=0)),  # Apply cutout to the entire image
+
+    transforms.RandomGrayscale(p=0.25),
     transforms.RandomRotation(degrees=15),
     transforms.RandomVerticalFlip(),
     transforms.ColorJitter(0.15, 0.15, 0.15),
-    transforms.RandAugment(),
-    torchvision.transforms.RandomAutocontrast(p=0.5),
+    # transforms.RandAugment(),
+    torchvision.transforms.RandomAutocontrast(p=0.4),
     transforms.ToTensor(),
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 ])
@@ -113,19 +132,33 @@ model = base_model
 # base_model.fc = nn.Linear(in_features=num_features, out_features=num_classes)
 # model = base_model
 
-
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model.to(device)
+# model_c = torch.compile(model) #Not possible with inception v3
+model_c = model
 # Define loss function and optimizer
 criterion = nn.CrossEntropyLoss() #First Model
 
-#New Idea: See Savchenko et al (2022): Weighted cross entropy loss
+# #New Idea: See Savchenko et al (2022): Weighted cross entropy loss
 # class_counts = train_annotations_df['label'].value_counts().sort_index()
 # class_weights = 1.0 / torch.Tensor(class_counts)
 # criterion = nn.CrossEntropyLoss(weight=class_weights)
 
+# Define patterns to include/exclude BatchNorm parameters
+include_patterns = [r'^(?!.*\.bn)']  # Match any layer name that doesn't contain '.bn' 
+exclude_patterns = [r'.*\.bn.*']
+
+# Filter parameters for weight decay and no weight decay
+params_to_decay, params_not_to_decay = filter_params(model.named_parameters(), include_patterns, exclude_patterns)
 
 # optimizer = optim.AdamW(model.parameters(), lr=3e-04, weight_decay=0.2) 
 # optimizer = optim.AdamW(model.parameters(), lr=3e-05, weight_decay=0.2)  #FirstModel
-optimizer = optim.AdamW(model.parameters(), lr=7e-05, weight_decay=0.2)
+
+# Create optimizer with different weight decay for different parameter groups
+optimizer = optim.AdamW([
+    {'params': params_to_decay, 'weight_decay': 0.2},  # Apply weight decay to these parameters
+    {'params': params_not_to_decay, 'weight_decay': 0.0}  # Exclude weight decay for these parameters
+], lr=4e-05)
 
 
 
@@ -136,10 +169,6 @@ lr_scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max = batch_size*epoc
 
 # Train the model
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model.to(device)
-# model_c = torch.compile(model) #Not possible with inception v3
-model_c = model
 
 scaler = torch.cuda.amp.GradScaler()
 
@@ -157,7 +186,7 @@ for epoch in range(epochs):
         optimizer.zero_grad()
         with torch.autocast(device_type='cuda', dtype=torch.float16):
             output = model_c(images)
-            loss = criterion(output, labels)
+            loss = criterion(output.cuda(), labels.cuda())
             scaler.scale(loss).backward()
             scaler.step(optimizer)
             scaler.update()
@@ -178,7 +207,7 @@ for epoch in range(epochs):
         for images, labels in valid_loader:
             images, labels = images.to(device), labels.to(device)
             outputs = model_c(images)
-            loss = criterion(outputs, labels)
+            loss = criterion(outputs.cuda(), labels.cuda())
             valid_loss += loss.item()
             _, predicted = torch.max(outputs, 1)
             total += labels.size(0)
@@ -197,3 +226,4 @@ for epoch in range(epochs):
 
 # Save the trained model
 torch.save(model.state_dict(), 'affectNet_emotion_model.pth')
+
