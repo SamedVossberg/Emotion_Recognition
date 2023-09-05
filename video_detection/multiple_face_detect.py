@@ -26,8 +26,8 @@ if(args.source == "Default"):
     cap = cv2.VideoCapture(0)
 else:
     cap = cv2.VideoCapture(
-        # os.path.abspath(args.source) if not args.source == "webcam" else 1
-        0
+        os.path.abspath(args.source) if not args.source == "webcam" else 1
+        # 0
     )
     cap.set(cv2.CAP_PROP_FPS, int(args.fps))
 
