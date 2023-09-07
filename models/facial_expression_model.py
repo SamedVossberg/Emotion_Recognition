@@ -27,4 +27,5 @@ class FacialExpressionModel(object):
     # function for Emotion detection returning the FaceialExpressionModel emotions
     def predict_emotion(self, img):
         self.preds = self.loaded_model.predict(img)
+        print(self.preds)
         return FacialExpressionModel.EMOTIONS_LIST[np.argmax(self.preds)]
