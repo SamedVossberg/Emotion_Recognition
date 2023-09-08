@@ -16,24 +16,20 @@ parser.add_argument("--fps", nargs="?", default=30)
 args = parser.parse_args()
 
 init_cap_params = sl.InitParameters()
-init_cap_params.camera_resolution = sl.RESOLUTION.HD720
-init_cap_params.depth_mode = sl.DEPTH_MODE.ULTRA
-init_cap_params.coordinate_units = sl.UNIT.METER
-init_cap_params.depth_stabilization = True
-init_cap_params.camera_image_flip = sl.FLIP_MODE.AUTO
-init_cap_params.coordinate_system = sl.COORDINATE_SYSTEM.RIGHT_HANDED_Y_UP
+init_cap_params.camera_resolution = sl.RESOLUTION.HD2K
 
 cap = sl.Camera()
-if not cap.is_opened():
-    print("Opening ZED Camera...")
+
 status = cap.open(init_cap_params)
 if status != sl.ERROR_CODE.SUCCESS:
     print(repr(status))
     exit()
-cap.set(cv2.CAP_PROP_EXPOSURE, 10)  # TBD
+# Create an RGBA sl.Mat object
+image_zed = sl.Mat()
 
 # load the facecascade model
-faceCascade = cv2.CascadeClassifier("./models/haarcascade_frontalface_default.xml")
+faceCascade = cv2.CascadeClassifier(
+    "./models/haarcascade_frontalface_default.xml")
 
 font = cv2.FONT_HERSHEY_SIMPLEX
 
@@ -68,23 +64,25 @@ def getdata():
     # # gray = cv2.cvtColor(fr, cv2.COLOR_BGR2GRAY)
     # gray = cv2.cvtColor(fr,cv2.COLOR_BGR2RGB)#
 
-    _, fr = cap.read()
-
-    left_right_image = np.split(fr, 2, axis=1)
+    status = cap.grab()
+    if status != sl.ERROR_CODE.SUCCESS:
+        print(repr(f"cap.grab error: {status}"))
+        exit()
+    cap.retrieve_image(image_zed, sl.VIEW.LEFT)
+    image_ocv = image_zed.get_data()
 
     leftright = 780
     topdown = 300
-    left_right_image[0] = left_right_image[0]
-    # [
-    #     topdown : topdown + 600, leftright : leftright + 650, :
-    # ]
+    image_ocv = image_ocv[
+        topdown: topdown + 600, leftright: leftright + 650, :
+    ]
 
-    gray = cv2.cvtColor(left_right_image[0], cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(image_ocv, cv2.COLOR_BGR2RGB)
 
     faces = faceCascade.detectMultiScale(gray, 1.3, 5)
     detected_faces = [DetectedFace(x, y, w, h) for x, y, w, h in faces]
 
-    return detected_faces, left_right_image[0], left_right_image[0]
+    return detected_faces, image_ocv, gray
 
 
 # starting app and running face detection using OpenCV
@@ -92,7 +90,7 @@ def getdata():
 
 def start_app(cnn):
     global last_face_id
-    while cap.isOpened():
+    while True:
         faces, fr, gray_fr = getdata()
 
         # Sort detected faces by x-coordinate
@@ -114,7 +112,8 @@ def start_app(cnn):
         ]  # List to hold the faces with maximum probability in each area
 
         # split faces into the respective areas
-        area1_faces = [face for face in faces if face.x + face.w / 2 < threshold_index1]
+        area1_faces = [face for face in faces if face.x +
+                       face.w / 2 < threshold_index1]
         area2_faces = [
             face
             for face in faces
@@ -208,7 +207,7 @@ def start_app(cnn):
             face = max_prob_faces[i]
             if face is None:
                 continue
-            fc = gray_fr[face.y : face.y + face.h, face.x : face.x + face.w]
+            fc = gray_fr[face.y: face.y + face.h, face.x: face.x + face.w]
 
             roi = cv2.resize(fc, (214, 214))
             pred = cnn.predict_emotion(roi)
@@ -219,7 +218,8 @@ def start_app(cnn):
             cv2.putText(
                 fr,
                 # f"{pred} ({face.id})",
-                f"({face_ids[i]}) {pred}",  # currently changed to highlight index changes
+                # currently changed to highlight index changes
+                f"({face_ids[i]}) {pred}",
                 (face.x, face.y),
                 fontFace=font,
                 fontScale=1,
@@ -249,5 +249,6 @@ def start_app(cnn):
 
 if __name__ == "__main__":
     # model = FacialExpressionModel("./models/model.json", "./models/weights.h5")
-    model = AffectModel("models/new_model/affectNet_emotion_model_best_1.49.pth")
+    model = AffectModel(
+        "models/new_model/affectNet_emotion_model_best_1.49.pth")
     start_app(model)

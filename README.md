@@ -27,3 +27,13 @@ To debug with breakpoints, you can add a debug config for your file
 
 ## Notes
 Always use absolute file paths. 
+
+## Docker
+### Create the Docker image
+```bash
+sudo docker build -t emotion_recognition .
+```
+### Run the built Docker image
+```bash
+sudo docker run --gpus all --privileged -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix emotion_recognition:latest
+```

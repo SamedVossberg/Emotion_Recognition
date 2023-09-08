@@ -10,22 +10,10 @@ from models.new_model.affect_model import AffectModel
 # THIS MIGHT BE DIFFERENT FOR YOU BC I AM ON MACOS! SO BE AWARE THIS MIGHT BE A SOURCE OF ERROR WHEN U TRY TO START UP
 # Changed fps to an optional argument --> Now you can just pass "Default" as the source argument and no fps limit is set and source 0 (to avoid start up problems on windows)
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--source", default=0)
-parser.add_argument("--fps", nargs="?", default=30)
-args = parser.parse_args()
 
 
-if args.source == "Default":
-    cap = cv2.VideoCapture(0)
-else:
-    cap = cv2.VideoCapture(
-        os.path.abspath(args.source)
-        if not args.source == "webcam"
-        else 1
-        # 0
-    )
-    cap.set(cv2.CAP_PROP_FPS, int(args.fps))
+cap=cv2.VideoCapture(0)
+# cap.set(cv2.CAP_PROP_FPS, int(args.fps))
 
 # load the facecascade model
 faceCascade = cv2.CascadeClassifier("./models/haarcascade_frontalface_default.xml")
@@ -230,5 +218,5 @@ def start_app(cnn):
 
 if __name__ == "__main__":
     # model = FacialExpressionModel("./models/model.json", "./models/weights.h5")
-    model = AffectModel("affectNet_emotion_model_best_1.49.pth")
+    model = AffectModel("models/new_model/affectNet_emotion_model_best_1.49.pth")
     start_app(model)
