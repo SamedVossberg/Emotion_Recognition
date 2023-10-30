@@ -4,6 +4,14 @@ from torchvision.transforms import ToTensor
 from efficientnet_pytorch import EfficientNet
 from torchvision.models import efficientnet_b4, EfficientNet_B4_Weights
 
+from torchvision.models._api import WeightsEnum
+from torch.hub import load_state_dict_from_url
+
+def get_state_dict(self, *args, **kwargs):
+    kwargs.pop("check_hash")
+    return load_state_dict_from_url(self.url, *args, **kwargs)
+WeightsEnum.get_state_dict = get_state_dict
+
 class AffectModel(object):
     EMOTIONS_COLOR_MAPPING = {
         "Angry": (255, 0, 0),
