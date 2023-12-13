@@ -10,6 +10,9 @@ __pycache__/
 *.py[cod]
 
 dataset/
+data/videos
+models/checkpoint.pt
+
 
 testAffectNet.py
 
